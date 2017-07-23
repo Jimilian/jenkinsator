@@ -1,10 +1,10 @@
 # jenkinsator
 [![Build Status](https://travis-ci.org/Jimilian/jenkinsator.svg?branch=master)](https://travis-ci.org/Jimilian/jenkinsator)
 
-h1. How to install it
+## How to install it
 Just download jenkinsator.py file and follow the instructions.
 
-h1. How to use it
+## How to use it
 
 I.e. replace all ocurances of SOURCE by DEST for the list of jobs provided in file jobs.txt:
 
@@ -13,3 +13,7 @@ I.e. replace all ocurances of SOURCE by DEST for the list of jobs provided in fi
 For more details check:
 
     python jenkinsator.py --help
+
+==
+
+Work in Progress!
