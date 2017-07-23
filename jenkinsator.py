@@ -38,6 +38,6 @@ if __name__ == '__main__':
         exit(1)
 
     for job in jobs:
-        print (job)
+        print(job)
 
     exit(0)
