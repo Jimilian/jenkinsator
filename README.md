@@ -6,7 +6,7 @@ Just download jenkinsator.py file and follow the instructions.
 
 ## How to use it
 
-I.e. replace all ocurances of SOURCE by DEST for the list of jobs provided in file jobs.txt:
+I.e. replace all occurances of SOURCE by DEST for the list of jobs provided in file jobs.txt:
 
     python jenkinsator.py JENKINS_URL --login=LOGIN --password=PASSWORD --replace "SOURCE#DEST" --jobs-file=jobs.txt
 
@@ -14,6 +14,26 @@ For more details check:
 
     python jenkinsator.py --help
 
+## How to provide credentials in secure way
+
+The tool supports two ways: secure and in-secure (as it was shown in example above). The secure way is a little bit more complex and it uses the magic of [.netrc](https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html) in case of Linux/Mac or [_netrc](https://superuser.com/a/1076070/483606) on Windows. So, all you need is to create a *~/.netrc* file this follow content:
+
+    default
+            login <your_login>
+            password <your_password>
+
+or
+
+    machine <jenkins_host_name>
+            login <your_login>
+            password <your_password>
+
+If you just created the *.netrc* file, you must change the permission to 600 using the follow command:
+
+    chmod 600 ~/.netrc
+
+Done! Now *jenkinsator* will be able to get the credentials from this file.
+
 ==
 
-Work in Progress!
+Work in Progress! So far *jenkinsator* was tested with python3.4+ only.

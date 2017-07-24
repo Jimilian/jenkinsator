@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function
 
 import sys
+import netrc
 import argparse
 
 try:
@@ -36,15 +37,34 @@ def replace(options, input_string):
     return input_string.replace(orig, target)
 
 
+def url_to_host(url):
+    return url.replace("http://", "").replace("https://", "")
+
+
 def connect(url, login, password):
+    if not login and not password:
+        host = url_to_host(url)
+        try:
+            secrets = netrc.netrc()
+            secret = secrets.authenticators(host)
+        except IOError:
+            print("Please, provide login and password as parameters "
+                  "or put them to .netrc file as default values for the host:", host)
+            secret = None
+
+        if secret is None:
+            return None
+
+        login, _, password = secret
+
     return jenkins_api.Jenkins(url, login, password)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Jenkinsator helps to orchestrate Jenkins master')
     parser.add_argument(dest="jenkins", action="store", help="Jenkins master [full url]")
-    parser.add_argument('--login', help="login to access Jenkins master")
-    parser.add_argument('--password', help="password to access Jenkins master")
+    parser.add_argument('--login', help="login to access Jenkins [INSECURE - use .netrc]")
+    parser.add_argument('--password', help="password to access Jenkins [INSECURE - use .netrc]")
     parser.add_argument('--jobs-file',
                         help="file to retrive the list of jobs to be processed [one url per line]")
     parser.add_argument('--job', help="job to be processed [full path]")
@@ -73,7 +93,7 @@ if __name__ == '__main__':
     if not jenkins:
         sys.exit(1)
 
-    print("Succesfully connected to %s." % args.jenkins, "version is", jenkins.get_version())
+    print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
     for job in jobs:
         try:
