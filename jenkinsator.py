@@ -10,6 +10,8 @@ except ImportError as e:
     no_module_error = "No module named "
     if(e.message.startswith(no_module_error)):
         module_name = e.message[len(no_module_error):]
+        if module_name == "jenkins":
+            module_name = "python-jenkins"
         print(e)
         print("Please, install it via: sudo python -m pip install", module_name)
         sys.exit(1)
