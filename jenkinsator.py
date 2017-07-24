@@ -76,7 +76,12 @@ if __name__ == '__main__':
     print("Succesfully connected to %s." % args.jenkins, "version is", jenkins.get_version())
 
     for job in jobs:
-        config = jenkins.get_job_config(job)
+        try:
+            config = jenkins.get_job_config(job)
+        except jenkins_api.NotFoundException:
+            print("Can't find the job:", job)
+            continue
+
         if args.replace:
             new_config = replace(args.replace, config)
             if config == new_config:
