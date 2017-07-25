@@ -61,19 +61,19 @@ def connect(url, login, password):
 
 
 def validate_params(params):
-    if args.replace and not params.name and not params.from_file:
+    if args.replace and not params.name and not params.jobs_file:
         print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
         return False
 
-    if params.name and params.from_file:
+    if params.name and params.jobs_file:
         print("Using '--job' and '--jobs-file' at the same time is not supported")
         return False
 
-    if args.dump_to_file and (not params.name or params.from_file):
+    if args.dump_to_file and (not params.name or params.jobs_file):
         print("`--dump-to-file` can be used only with `--name`")
         return False
 
-    if args.create_from_file and (not params.name or params.from_file):
+    if args.create_from_file and (not params.name or params.jobs_file):
         print("`--create-from-file` can be used only with `--name`")
         return False
 
@@ -98,8 +98,8 @@ def process_jobs(jenkins, args):
     if args.name:
         jobs = [args.name]
 
-    if args.from_file:
-        jobs = get_job_list(args.from_file)
+    if args.jobs_file:
+        jobs = get_job_list(args.jobs_file)
 
     if args.replace:
         for job in jobs:
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(title='Actions', dest="action")
     job_parser = subparsers.add_parser("job")
-    job_parser.add_argument('--from-file',
+    job_parser.add_argument('--jobs-file',
                             help="file to retrive the list of jobs to be processed [one per line]")
     job_parser.add_argument('--name', help="job to be processed [full name]")
     job_parser.add_argument('--replace',

@@ -8,7 +8,7 @@ Just download jenkinsator.py file and follow the instructions.
 
 I.e. replace all occurances of SOURCE by DEST for the list of jobs provided in file jobs.txt:
 
-    python jenkinsator.py JENKINS_URL --login=LOGIN --password=PASSWORD --replace "SOURCE#DEST" --jobs-file=jobs.txt
+    python jenkinsator.py JENKINS_URL --login=LOGIN --password=PASSWORD job --replace "SOURCE#DEST" --jobs-file=jobs.txt
 
 For more details check:
 
@@ -34,6 +34,18 @@ If you just created the *.netrc* file, you must change the permission to 600 usi
 
 Done! Now *jenkinsator* will be able to get the credentials from this file.
 
-==
+## Supported features
+
+[x] Replace pattern in job config
+[x] Create new job from config.xml file
+[x] Dump job configuration to thie
+
+## Road map
+
+[] Enable/disable the job
+[] Enable/disable the node
+[] Replace pattern in node config
+
+--
 
 Work in Progress! So far *jenkinsator* was tested with python3.4+ only.
