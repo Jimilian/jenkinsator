@@ -61,11 +61,11 @@ def connect(url, login, password):
 
 
 def validate_params(params):
-    if params.job and params.jobs_file:
+    if params.name and params.from_file:
         print("Using '--job' and '--jobs-file' at the same time is not supported")
         return False
 
-    if not params.job and not params.jobs_file:
+    if not params.name and not params.from_file:
         print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
         return False
 
@@ -73,36 +73,42 @@ def validate_params(params):
 
 
 def main(args):
-    jobs = None
-    if args.job:
-        jobs = [args.job]
-
-    if args.jobs_file:
-        jobs = get_job_list(args.jobs_file)
-
     jenkins = connect(args.jenkins, args.login, args.password)
     if not jenkins:
         return 1
 
     print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
-    for job in jobs:
-        try:
-            config = jenkins.get_job_config(job)
-        except jenkins_api.NotFoundException:
-            print("Can't find the job:", job)
-            continue
-
-        if args.replace:
-            new_config = replace(args.replace, config)
-            if config == new_config:
-                print("Config was not changed for the job:", job)
-            else:
-                if not args.dry_run:
-                    jenkins.reconfig_job(job, new_config)
-                print("Config was updated for the job:", job)
+    if args.action == "job":
+        process_jobs(jenkins, args)
 
     return 0
+
+
+def process_jobs(jenkins, args):
+    jobs = None
+    if args.name:
+        jobs = [args.name]
+
+    if args.from_file:
+        jobs = get_job_list(args.from_file)
+
+    if args.replace:
+        for job in jobs:
+            try:
+                config = jenkins.get_job_config(job)
+            except jenkins_api.NotFoundException:
+                print("Can't find the job:", job)
+                continue
+
+            if args.replace:
+                new_config = replace(args.replace, config)
+                if config == new_config:
+                    print("Config was not changed for the job:", job)
+                else:
+                    if not args.dry_run:
+                        jenkins.reconfig_job(job, new_config)
+                    print("Config was updated for the job:", job)
 
 
 if __name__ == '__main__':
@@ -110,13 +116,17 @@ if __name__ == '__main__':
     parser.add_argument(dest="jenkins", action="store", help="Jenkins master [full url]")
     parser.add_argument('--login', help="login to access Jenkins [INSECURE - use .netrc]")
     parser.add_argument('--password', help="password to access Jenkins [INSECURE - use .netrc]")
-    parser.add_argument('--jobs-file',
-                        help="file to retrive the list of jobs to be processed [one url per line]")
-    parser.add_argument('--job', help="job to be processed [full path]")
-    parser.add_argument('--replace', help="use {0} to split original value and desired one, i.e. "
-                                          "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
-                                          format(REPLACE_SPLITTER))
     parser.add_argument('--dry-run', action="store_true", help="do not perform any action")
+
+    subparsers = parser.add_subparsers(title='Actions', dest="action")
+    job_parser = subparsers.add_parser("job")
+    job_parser.add_argument('--from-file',
+                            help="file to retrive the list of jobs to be processed [one per line]")
+    job_parser.add_argument('--name', help="job to be processed [full name]")
+    job_parser.add_argument('--replace',
+                            help="use {0} to split original value and desired one, i.e."
+                            "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
+                            format(REPLACE_SPLITTER))
     args = parser.parse_args()
 
     if not validate_params(args):
