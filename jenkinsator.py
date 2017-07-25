@@ -60,24 +60,19 @@ def connect(url, login, password):
     return jenkins_api.Jenkins(url, login, password)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Jenkinsator helps to orchestrate Jenkins master')
-    parser.add_argument(dest="jenkins", action="store", help="Jenkins master [full url]")
-    parser.add_argument('--login', help="login to access Jenkins [INSECURE - use .netrc]")
-    parser.add_argument('--password', help="password to access Jenkins [INSECURE - use .netrc]")
-    parser.add_argument('--jobs-file',
-                        help="file to retrive the list of jobs to be processed [one url per line]")
-    parser.add_argument('--job', help="job to be processed [full path]")
-    parser.add_argument('--replace', help="use {0} to split original value and desired one, i.e. "
-                                          "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
-                                          format(REPLACE_SPLITTER))
-    parser.add_argument('--dry-run', action="store_true", help="do not perform any action")
-    args = parser.parse_args()
-
-    if args.job and args.jobs_file:
+def validate_params(params):
+    if params.job and params.jobs_file:
         print("Using '--job' and '--jobs-file' at the same time is not supported")
-        sys.exit(1)
+        return False
 
+    if not params.job and not params.jobs_file:
+        print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
+        return False
+
+    return True
+
+
+def main(args):
     jobs = None
     if args.job:
         jobs = [args.job]
@@ -85,13 +80,9 @@ if __name__ == '__main__':
     if args.jobs_file:
         jobs = get_job_list(args.jobs_file)
 
-    if not jobs:
-        print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
-        sys.exit(1)
-
     jenkins = connect(args.jenkins, args.login, args.password)
     if not jenkins:
-        sys.exit(1)
+        return 1
 
     print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
@@ -111,4 +102,24 @@ if __name__ == '__main__':
                     jenkins.reconfig_job(job, new_config)
                 print("Config was updated for the job:", job)
 
-    exit(0)
+    return 0
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Jenkinsator helps to orchestrate Jenkins master')
+    parser.add_argument(dest="jenkins", action="store", help="Jenkins master [full url]")
+    parser.add_argument('--login', help="login to access Jenkins [INSECURE - use .netrc]")
+    parser.add_argument('--password', help="password to access Jenkins [INSECURE - use .netrc]")
+    parser.add_argument('--jobs-file',
+                        help="file to retrive the list of jobs to be processed [one url per line]")
+    parser.add_argument('--job', help="job to be processed [full path]")
+    parser.add_argument('--replace', help="use {0} to split original value and desired one, i.e. "
+                                          "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
+                                          format(REPLACE_SPLITTER))
+    parser.add_argument('--dry-run', action="store_true", help="do not perform any action")
+    args = parser.parse_args()
+
+    if not validate_params(args):
+        sys.exit(1)
+
+    sys.exit(main(args))
