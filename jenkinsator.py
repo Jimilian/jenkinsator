@@ -61,12 +61,20 @@ def connect(url, login, password):
 
 
 def validate_params(params):
+    if args.replace and not params.name and not params.from_file:
+        print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
+        return False
+
     if params.name and params.from_file:
         print("Using '--job' and '--jobs-file' at the same time is not supported")
         return False
 
-    if not params.name and not params.from_file:
-        print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
+    if args.dump_to_file and (not params.name or params.from_file):
+        print("`--dump-to-file` can be used only with `--name`")
+        return False
+
+    if args.create_from_file and (not params.name or params.from_file):
+        print("`--create-from-file` can be used only with `--name`")
         return False
 
     return True
@@ -109,6 +117,16 @@ def process_jobs(jenkins, args):
                     if not args.dry_run:
                         jenkins.reconfig_job(job, new_config)
                     print("Config was updated for the job:", job)
+    elif args.dump_to_file:
+        if not args.dry_run:
+            with open(args.dump_to_file, "w") as f:
+                f.write(config)
+            print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
+    elif args.create_from_file:
+        with open(args.create_from_file) as f:
+            if not args.dry_run:
+                jenkins.create_job(args.name, f.read())
+            print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
 
 
 if __name__ == '__main__':
@@ -127,6 +145,8 @@ if __name__ == '__main__':
                             help="use {0} to split original value and desired one, i.e."
                             "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
                             format(REPLACE_SPLITTER))
+    job_parser.add_argument('--dump-to-file', help="dump job configuration to the file")
+    job_parser.add_argument('--create-from-file', help="create the job from configuration file")
     args = parser.parse_args()
 
     if not validate_params(args):
