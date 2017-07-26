@@ -93,6 +93,15 @@ def main(args):
     return 0
 
 
+def get_config(jenkins, job_name):
+    try:
+        return jenkins.get_job_config(job_name)
+    except jenkins_api.NotFoundException:
+        print("Can't find the job:", job_name)
+
+    return None
+
+
 def process_jobs(jenkins, args):
     jobs = None
     if args.name:
@@ -103,10 +112,8 @@ def process_jobs(jenkins, args):
 
     if args.replace:
         for job in jobs:
-            try:
-                config = jenkins.get_job_config(job)
-            except jenkins_api.NotFoundException:
-                print("Can't find the job:", job)
+            config = get_config(jenkins, job)
+            if not config:
                 continue
 
             if args.replace:
@@ -118,15 +125,20 @@ def process_jobs(jenkins, args):
                         jenkins.reconfig_job(job, new_config)
                     print("Config was updated for the job:", job)
     elif args.dump_to_file:
+        config = get_config(jenkins, args.name)
+        if not config:
+            return
+
         if not args.dry_run:
             with open(args.dump_to_file, "w") as f:
                 f.write(config)
-            print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
+        print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
     elif args.create_from_file:
         with open(args.create_from_file) as f:
             if not args.dry_run:
                 jenkins.create_job(args.name, f.read())
             print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
+    return
 
 
 if __name__ == '__main__':
