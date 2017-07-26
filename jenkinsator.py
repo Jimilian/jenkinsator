@@ -32,11 +32,6 @@ def get_job_list(job_file):
     return jobs
 
 
-def replace(options, input_string):
-    orig, target = options.split(REPLACE_SPLITTER)
-    return input_string.replace(orig, target)
-
-
 def url_to_host(url):
     return url.replace("http://", "").replace("https://", "")
 
@@ -102,7 +97,7 @@ def get_config(jenkins, job_name):
     return None
 
 
-def process_jobs(jenkins, args):
+def get_jobs(args):
     jobs = None
     if args.name:
         jobs = [args.name]
@@ -110,34 +105,56 @@ def process_jobs(jenkins, args):
     if args.jobs_file:
         jobs = get_job_list(args.jobs_file)
 
-    if args.replace:
-        for job in jobs:
-            config = get_config(jenkins, job)
-            if not config:
-                continue
+    return jobs
 
-            if args.replace:
-                new_config = replace(args.replace, config)
-                if config == new_config:
-                    print("Config was not changed for the job:", job)
-                else:
-                    if not args.dry_run:
-                        jenkins.reconfig_job(job, new_config)
-                    print("Config was updated for the job:", job)
-    elif args.dump_to_file:
-        config = get_config(jenkins, args.name)
-        if not config:
-            return
 
-        if not args.dry_run:
-            with open(args.dump_to_file, "w") as f:
-                f.write(config)
-        print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
-    elif args.create_from_file:
-        with open(args.create_from_file) as f:
+def replace(jenkins, args):
+    jobs = get_jobs(args)
+
+    for job in jobs:
+        original_config = get_config(jenkins, job)
+        if not original_config:
+            continue
+
+        orig, target = args.replace.split(REPLACE_SPLITTER)
+        new_config = original_config.replace(orig, target)
+
+        if original_config == new_config:
+            print("Config was not changed for the job:", job)
+        else:
             if not args.dry_run:
-                jenkins.create_job(args.name, f.read())
-            print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
+                jenkins.reconfig_job(job, new_config)
+            print("Config was updated for the job:", job)
+
+    return
+
+
+def create_from_file(jenkins, args):
+    with open(args.create_from_file) as f:
+        if not args.dry_run:
+            jenkins.create_job(args.name, f.read())
+        print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
+
+
+def dump_to_file(jenkins, args):
+    config = get_config(jenkins, args.name)
+    if not config:
+        return
+
+    if not args.dry_run:
+        with open(args.dump_to_file, "w") as f:
+            f.write(config)
+    print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
+
+
+def process_jobs(jenkins, args):
+    if args.replace:
+        replace(jenkins, args)
+    elif args.dump_to_file:
+        dump_to_file(jenkins, args)
+    elif args.create_from_file:
+        create_from_file(jenkins, args)
+
     return
 
 
