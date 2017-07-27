@@ -55,7 +55,7 @@ def connect(url, login, password):
     return jenkins_api.Jenkins(url, login, password)
 
 
-def validate_params(params):
+def validate_params(params):  # noqa: C901
     if args.replace and not params.name and not params.jobs_file:
         print("Please, provide job name ('--job') or file with job names ('--jobs-file')")
         return False
@@ -70,6 +70,10 @@ def validate_params(params):
 
     if args.create_from_file and (not params.name or params.jobs_file):
         print("`--create-from-file` can be used only with `--name`")
+        return False
+
+    if args.enable and args.disable:
+        print("--enable and --disable can not be used together")
         return False
 
     return True
@@ -147,13 +151,32 @@ def dump_to_file(jenkins, args):
     print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
 
 
-def process_jobs(jenkins, args):
+def enable(jenkins, args):
+    for job in get_jobs(args):
+        if not args.dry_run:
+            jenkins.enable_job(job)
+        print("Enable the job:", job)
+
+
+def disable(jenkins, args):
+    for job in get_jobs(args):
+        if not args.dry_run:
+            jenkins.disable_job(job)
+        print("Disable the job:", job)
+
+
+def process_jobs(jenkins, args):  # noqa: C901
     if args.replace:
         replace(jenkins, args)
     elif args.dump_to_file:
         dump_to_file(jenkins, args)
     elif args.create_from_file:
         create_from_file(jenkins, args)
+
+    if args.enable:
+        enable(jenkins, args)
+    elif args.disable:
+        disable(jenkins, args)
 
     return
 
@@ -176,6 +199,8 @@ if __name__ == '__main__':
                             format(REPLACE_SPLITTER))
     job_parser.add_argument('--dump-to-file', help="dump job configuration to the file")
     job_parser.add_argument('--create-from-file', help="create the job from configuration file")
+    job_parser.add_argument('--enable', action="store_true", help="enable the job")
+    job_parser.add_argument('--disable', action="store_true", help="disable the job")
     args = parser.parse_args()
 
     if not validate_params(args):
