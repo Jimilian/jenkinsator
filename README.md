@@ -40,10 +40,10 @@ Done! Now *jenkinsator* will be able to get the credentials from this file.
 - [x] Create new job from config.xml file
 - [x] Dump job configuration to thie
 - [x] Enable/disable the job
+- [x] Enable/disable the node
 
 ## Road map
 
-- [ ] Enable/disable the node
 - [ ] Replace pattern in node config
 
 ---
