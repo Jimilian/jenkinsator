@@ -56,14 +56,6 @@ def connect(url, login, password):
 
 
 def validate_params(params):  # noqa: C901
-    if not params.name and not params.list_from_file:
-        print("Please, provide job name ('--name') or file with job names ('--list-from-file')")
-        return False
-
-    if params.name and params.list_from_file:
-        print("Using '--name' and '--list-from-file' at the same time is not supported")
-        return False
-
     if args.action == "job":
         if args.dump_to_file and (not params.name or params.list_from_file):
             print("`--dump-to-file` can be used only with `--name`")
@@ -72,6 +64,19 @@ def validate_params(params):  # noqa: C901
         if args.create_from_file and (not params.name or params.list_from_file):
             print("`--create-from-file` can be used only with `--name`")
             return False
+    elif args.action == "node":
+        if params.get_nodes:
+            return True
+    else:
+        return True
+
+    if not params.name and not params.list_from_file:
+        print("Please, provide job name ('--name') or file with job names ('--list-from-file')")
+        return False
+
+    if params.name and params.list_from_file:
+        print("Using '--name' and '--list-from-file' at the same time is not supported")
+        return False
 
     if args.enable and args.disable:
         print("--enable and --disable can not be used together")
@@ -91,8 +96,19 @@ def main(args):
         process_jobs(jenkins, args)
     elif args.action == "node":
         process_nodes(jenkins, args)
+    elif args.action == "plugin":
+        process_plugins(jenkins, args)
 
     return 0
+
+
+def process_plugins(jenkins, args):
+    if args.dry_run:
+        return
+
+    for plugin, desc in sorted(jenkins.get_plugins(depth=1).iteritems(),
+                               key=lambda x: x[0][1]):
+        print("{0}: {1}".format(plugin[1], desc["version"]))
 
 
 def process_nodes(jenkins, args):
@@ -100,8 +116,22 @@ def process_nodes(jenkins, args):
         enable(jenkins, args, "node")
     elif args.disable:
         disable(jenkins, args, "node")
+    elif args.get_nodes:
+        get_all_nodes(jenkins, args)
 
     return
+
+
+def get_all_nodes(jenkins, args):
+    if args.dry_run:
+        print("This option doesn't support dry-run")
+        return
+
+    show_all = args.get_nodes == "all"
+
+    for node in jenkins.get_nodes():
+        if show_all or node['offline'] == (args.get_nodes == "offline"):
+            print(node['name'])
 
 
 def get_config(jenkins, job_name):
@@ -223,6 +253,13 @@ if __name__ == '__main__':
         sub_parser.add_argument('--name', help=key + " to be processed [full name]")
         sub_parser.add_argument('--enable', action="store_true", help="enable the " + key)
         sub_parser.add_argument('--disable', action="store_true", help="disable the " + key)
+
+    node_parser.add_argument('--get-nodes', choices=["offline", "online", "all"],
+                             help="dump list of all connected nodes")
+
+    plugin_parser = subparsers.add_parser("plugin")
+    plugin_parser.add_argument("--list-all", action="store_true",
+                               help="list all available plugins")
 
     args = parser.parse_args()
 

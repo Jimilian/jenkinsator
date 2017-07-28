@@ -41,6 +41,7 @@ Done! Now *jenkinsator* will be able to get the credentials from this file.
 - [x] Dump job configuration to thie
 - [x] Enable/disable the job
 - [x] Enable/disable the node
+- [x] List all plugins
 
 ## Road map
 
