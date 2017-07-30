@@ -236,7 +236,8 @@ if __name__ == '__main__':
     parser.add_argument('--password', help="password to access Jenkins [INSECURE - use .netrc]")
     parser.add_argument('--dry-run', action="store_true", help="do not perform any action")
 
-    subparsers = parser.add_subparsers(title='Actions', dest="action")
+    subparsers = parser.add_subparsers(title='Actions', dest="action",
+                                       help="Choose action type you want to perform")
     job_parser = subparsers.add_parser("job")
     job_parser.add_argument('--replace',
                             help="use {0} to split original value and desired one, i.e."
