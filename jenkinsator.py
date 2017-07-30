@@ -67,6 +67,12 @@ def validate_params(params):  # noqa: C901
     elif args.action == "node":
         if params.get_nodes:
             return True
+    elif args.action == "script":
+        if params.execute_from_file:
+            return True
+        else:
+            print("Please, specify `--execute-from-file` option")
+            return False
     else:
         return True
 
@@ -87,8 +93,6 @@ def validate_params(params):  # noqa: C901
 
 def main(args):
     jenkins = connect(args.jenkins, args.login, args.password)
-    if not jenkins:
-        return 1
 
     print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
@@ -98,8 +102,20 @@ def main(args):
         process_nodes(jenkins, args)
     elif args.action == "plugin":
         process_plugins(jenkins, args)
+    elif args.action == "script":
+        process_script(jenkins, args)
 
     return 0
+
+
+def process_script(jenkins, args):
+    with open(args.execute_from_file) as f:
+        script = f.read()
+
+        if not args._dry_run:
+            jenkins.run_script(script)
+
+        print("Script was succescully executed")
 
 
 def process_plugins(jenkins, args):
@@ -261,6 +277,10 @@ if __name__ == '__main__':
     plugin_parser = subparsers.add_parser("plugin")
     plugin_parser.add_argument("--list-all", action="store_true",
                                help="list all available plugins")
+
+    script_parser = subparsers.add_parser("script")
+    script_parser.add_argument("--execute-from-file", action="store",
+                               help="execute custom Groovy scipt from specified file")
 
     args = parser.parse_args()
 

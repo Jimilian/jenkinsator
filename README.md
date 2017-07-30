@@ -42,10 +42,13 @@ Done! Now *jenkinsator* will be able to get the credentials from this file.
 - [x] Enable/disable the job
 - [x] Enable/disable the node
 - [x] List all plugins
+- [x] Execute custom Groovy script
 
 ## Road map
 
 - [ ] Replace pattern in node config
+- [ ] Change the job configuration
+- [ ] Print queue content
 
 ---
 
