@@ -96,16 +96,17 @@ def main(args):
 
     print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
-    if args.action == "job":
-        process_jobs(jenkins, args)
-    elif args.action == "node":
-        process_nodes(jenkins, args)
-    elif args.action == "plugin":
-        process_plugins(jenkins, args)
-    elif args.action == "script":
-        process_script(jenkins, args)
+    do_action(args, jenkins)
 
-    return 0
+
+def do_action(args, jenkins):
+    actions = {"job": lambda x, y: process_jobs(x, y),
+               "node": lambda x, y: process_nodes(x, y),
+               "plugin": lambda x, y: process_plugins(x, y),
+               "script": lambda x, y: process_script(x, y)}
+
+    action = actions[args.action]
+    action(jenkins, args)
 
 
 def process_script(jenkins, args):
