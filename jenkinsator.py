@@ -113,10 +113,13 @@ def process_script(jenkins, args):
     with open(args.execute_from_file) as f:
         script = f.read()
 
-        if not args._dry_run:
-            jenkins.run_script(script)
+        if not args.dry_run:
+            res = jenkins.run_script(script)
+        else:
+            res = "Script was not executed: dry-run is enabled"
 
-        print("Script was succescully executed")
+        if res:
+            print(res)
 
 
 def process_plugins(jenkins, args):
