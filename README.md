@@ -39,8 +39,8 @@ Done! Now *jenkinsator* will be able to get the credentials from this file.
 - [x] Replace pattern in job config
 - [x] Create new job from config.xml file
 - [x] Dump job configuration to thie
-- [x] Enable/disable the job
-- [x] Enable/disable the node
+- [x] Enable/disable/delete the job
+- [x] Enable/disable/delete the node
 - [x] List all plugins
 - [x] Execute custom Groovy script
 

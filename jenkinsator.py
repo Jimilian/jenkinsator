@@ -136,6 +136,8 @@ def process_nodes(jenkins, args):
         enable(jenkins, args, "node")
     elif args.disable:
         disable(jenkins, args, "node")
+    elif args.delete:
+        delete(jenkins, args, "node")
     elif args.get_nodes:
         get_all_nodes(jenkins, args)
 
@@ -213,6 +215,16 @@ def dump_to_file(jenkins, args):
     print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
 
 
+def delete(jenkins, args, key):
+    for item in get_items(args):
+        if not args.dry_run:
+            if key == "job":
+                jenkins.delete_job(item)
+            else:
+                jenkins.delete_node(item)
+        print("Delete {0}: {1}".format(key, item))
+
+
 def enable(jenkins, args, key):
     for item in get_items(args):
         if not args.dry_run:
@@ -245,6 +257,8 @@ def process_jobs(jenkins, args):  # noqa: C901
         enable(jenkins, args, "job")
     elif args.disable:
         disable(jenkins, args, "job")
+    elif args.delete:
+        delete(jenkins, args, "job")
 
     return
 
@@ -274,6 +288,7 @@ if __name__ == '__main__':
         sub_parser.add_argument('--name', help=key + " to be processed [full name]")
         sub_parser.add_argument('--enable', action="store_true", help="enable the " + key)
         sub_parser.add_argument('--disable', action="store_true", help="disable the " + key)
+        sub_parser.add_argument('--delete', action="store_true", help="delete the " + key)
 
     node_parser.add_argument('--get-nodes', choices=["offline", "online", "all"],
                              help="dump list of all connected nodes")
