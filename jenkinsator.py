@@ -36,9 +36,6 @@ class DryJenkins(object):
         return (lambda *args: "DRY_RUN")
 
 
-REPLACE_SPLITTER = "#"
-
-
 def get_items_from_file(list_file):
     jobs = set()
     for line in open(list_file):
@@ -186,6 +183,15 @@ def get_items(args):
 
 
 def replace(jenkins, args):
+    splitter = args.replace[0]
+    statement = args.replace[1:]
+    if statement.count(splitter) != 1:
+        print()
+        print("You selected bad splitter '{0}', "
+              "because it occurs in your replacement as well. "
+              "Please, choose another one.".format(splitter))
+        return
+
     jobs = get_items(args)
 
     for job in jobs:
@@ -193,7 +199,7 @@ def replace(jenkins, args):
         if not original_config:
             continue
 
-        orig, target = args.replace.split(REPLACE_SPLITTER)
+        orig, target = args.replace[1:].split(splitter)
         new_config = original_config.replace(orig, target)
 
         if original_config == new_config:
@@ -265,9 +271,11 @@ if __name__ == '__main__':
                                        help="Choose action type you want to perform")
     job_parser = subparsers.add_parser("job")
     job_parser.add_argument('--replace',
-                            help="use {0} to split original value and desired one, i.e."
-                            "`aaa{0}bbb` replaces all occurances of `aaa` by `bbb`".
-                            format(REPLACE_SPLITTER))
+                            help="Use first symbol to configure the splitter "
+                            "and the rest of parameter to define the "
+                            "original value and desired one, i.e."
+                            "`?aaa?bbb` specifies `?` as a splitter and "
+                            "replaces all occurances of `aaa` by `bbb`")
     job_parser.add_argument('--dump-to-file', help="dump job configuration to the file")
     job_parser.add_argument('--create-from-file', help="create the job from configuration file")
     node_parser = subparsers.add_parser("node")

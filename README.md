@@ -8,7 +8,7 @@ Just download jenkinsator.py file and follow the instructions.
 
 I.e. replace all occurances of SOURCE by DEST for the list of jobs provided in file jobs.txt:
 
-    python jenkinsator.py JENKINS_URL --login=LOGIN --password=PASSWORD job --replace "SOURCE#DEST" --list-from-file=jobs.txt
+    python jenkinsator.py JENKINS_URL --login=LOGIN --password=PASSWORD job --replace "#SOURCE#DEST" --list-from-file=jobs.txt
 
 For more details check:
 
