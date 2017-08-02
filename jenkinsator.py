@@ -20,6 +20,22 @@ except ImportError as e:
         raise e
 
 
+class DryJenkins(object):
+    def get_nodes(self):
+        return [{"name": "dry node", "offline": True}]
+
+    def get_plugins(self, depth):
+        return {("DryRun Plugin", "dry run plugin"): {"version": 1}}
+
+    def __getattribute__(self, name):
+        if name == "get_nodes":
+            return lambda: DryJenkins.get_nodes(self)
+        if name == "get_plugins":
+            return lambda depth: DryJenkins.get_plugins(self, depth)
+
+        return (lambda *args: "DRY_RUN")
+
+
 REPLACE_SPLITTER = "#"
 
 
@@ -92,7 +108,10 @@ def validate_params(params):  # noqa: C901
 
 
 def main(args):
-    jenkins = connect(args.jenkins, args.login, args.password)
+    if not args.dry_run:
+        jenkins = connect(args.jenkins, args.login, args.password)
+    else:
+        jenkins = DryJenkins()
 
     print("Succesfully connected to %s." % args.jenkins, "Version is", jenkins.get_version())
 
@@ -113,31 +132,25 @@ def process_script(jenkins, args):
     with open(args.execute_from_file) as f:
         script = f.read()
 
-        if not args.dry_run:
-            res = jenkins.run_script(script)
-        else:
-            res = "Script was not executed: dry-run is enabled"
+        res = jenkins.run_script(script)
 
         if res:
             print(res)
 
 
 def process_plugins(jenkins, args):
-    if args.dry_run:
-        return
-
-    for plugin, desc in sorted(jenkins.get_plugins(depth=1).iteritems(),
+    for plugin, desc in sorted(jenkins.get_plugins(depth=1).items(),
                                key=lambda x: x[0][1]):
         print("{0}: {1}".format(plugin[1], desc["version"]))
 
 
 def process_nodes(jenkins, args):
     if args.enable:
-        enable(jenkins, args, "node")
+        generic_action(jenkins, args, "Enable node")
     elif args.disable:
-        disable(jenkins, args, "node")
+        generic_action(jenkins, args, "Disable node")
     elif args.delete:
-        delete(jenkins, args, "node")
+        generic_action(jenkins, args, "Delete node")
     elif args.get_nodes:
         get_all_nodes(jenkins, args)
 
@@ -145,10 +158,6 @@ def process_nodes(jenkins, args):
 
 
 def get_all_nodes(jenkins, args):
-    if args.dry_run:
-        print("This option doesn't support dry-run")
-        return
-
     show_all = args.get_nodes == "all"
 
     for node in jenkins.get_nodes():
@@ -190,8 +199,7 @@ def replace(jenkins, args):
         if original_config == new_config:
             print("Config was not changed for the job:", job)
         else:
-            if not args.dry_run:
-                jenkins.reconfig_job(job, new_config)
+            jenkins.reconfig_job(job, new_config)
             print("Config was updated for the job:", job)
 
     return
@@ -199,8 +207,7 @@ def replace(jenkins, args):
 
 def create_from_file(jenkins, args):
     with open(args.create_from_file) as f:
-        if not args.dry_run:
-            jenkins.create_job(args.name, f.read())
+        jenkins.create_job(args.name, f.read())
         print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
 
 
@@ -215,34 +222,18 @@ def dump_to_file(jenkins, args):
     print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
 
 
-def delete(jenkins, args, key):
+def generic_action(jenkins, args, key):
+    actions = {"Delete job": lambda x: jenkins.delete_job(x),
+               "Delete node": lambda x: jenkins.delete_node(x),
+               "Disable node": lambda x: jenkins.disable_node(x),
+               "Disable job": lambda x: jenkins.disable_job(x),
+               "Enable job": lambda x: jenkins.enable_job(x),
+               "Enable node": lambda x: jenkins.enable_node(x)}
+
     for item in get_items(args):
-        if not args.dry_run:
-            if key == "job":
-                jenkins.delete_job(item)
-            else:
-                jenkins.delete_node(item)
-        print("Delete {0}: {1}".format(key, item))
-
-
-def enable(jenkins, args, key):
-    for item in get_items(args):
-        if not args.dry_run:
-            if key == "job":
-                jenkins.enable_job(item)
-            else:
-                jenkins.enable_node(item)
-        print("Enable {0}: {1}".format(key, item))
-
-
-def disable(jenkins, args, key):
-    for item in get_items(args):
-        if not args.dry_run:
-            if key == "job":
-                jenkins.disable_job(item)
-            else:
-                jenkins.disable_node(item)
-        print("Disable {0}: {1}".format(key, item))
+        action = actions[key]
+        action(item)
+        print("{0}: {1}".format(key, item))
 
 
 def process_jobs(jenkins, args):  # noqa: C901
@@ -254,11 +245,11 @@ def process_jobs(jenkins, args):  # noqa: C901
         create_from_file(jenkins, args)
 
     if args.enable:
-        enable(jenkins, args, "job")
+        generic_action(jenkins, args, "Enable job")
     elif args.disable:
-        disable(jenkins, args, "job")
+        generic_action(jenkins, args, "Disable job")
     elif args.delete:
-        delete(jenkins, args, "job")
+        generic_action(jenkins, args, "Delete job")
 
     return
 
