@@ -142,14 +142,13 @@ def process_plugins(jenkins, args):
 
 
 def process_nodes(jenkins, args):
-    if args.enable:
-        generic_action(jenkins, args, "Enable node")
-    elif args.disable:
-        generic_action(jenkins, args, "Disable node")
-    elif args.delete:
-        generic_action(jenkins, args, "Delete node")
+    what_to_do = get_what_to_do(args, "node")
+    if what_to_do:
+        generic_action(jenkins, args, what_to_do)
     elif args.get_nodes:
         get_all_nodes(jenkins, args)
+    elif args.replace:
+        replace(jenkins, args, "node")
 
     return
 
@@ -162,11 +161,15 @@ def get_all_nodes(jenkins, args):
             print(node['name'])
 
 
-def get_config(jenkins, job_name):
+def get_config(jenkins, name, key):
     try:
-        return jenkins.get_job_config(job_name)
+        if key == "job":
+            return jenkins.get_job_config(name)
+        if key == "node":
+            return jenkins.get_node_config(name)
+        print("Invalid key for get_config:", key)
     except jenkins_api.NotFoundException:
-        print("Can't find the job:", job_name)
+        print("Can't find the {0}: {1}".format(key, name))
 
     return None
 
@@ -182,7 +185,15 @@ def get_items(args):
     return items
 
 
-def replace(jenkins, args):
+def update_config(jenkins, item, new_config, key):
+    if key == "job":
+        jenkins.reconfig_job(item, new_config)
+    if key == "node":
+        jenkins.reconfig_node(item, new_config)
+    return
+
+
+def replace(jenkins, args, key):
     splitter = args.replace[0]
     statement = args.replace[1:]
     if statement.count(splitter) != 1:
@@ -192,10 +203,10 @@ def replace(jenkins, args):
               "Please, choose another one.".format(splitter))
         return
 
-    jobs = get_items(args)
+    items = get_items(args)
 
-    for job in jobs:
-        original_config = get_config(jenkins, job)
+    for item in items:
+        original_config = get_config(jenkins, item, key)
         if not original_config:
             continue
 
@@ -203,10 +214,10 @@ def replace(jenkins, args):
         new_config = original_config.replace(orig, target)
 
         if original_config == new_config:
-            print("Config was not changed for the job:", job)
+            print("Config was not changed for the {0}: {1}".format(key, item))
         else:
-            jenkins.reconfig_job(job, new_config)
-            print("Config was updated for the job:", job)
+            update_config(jenkins, item, new_config, key)
+            print("Config was updated for the {0}: {1}".format(key, item))
 
     return
 
@@ -217,15 +228,18 @@ def create_from_file(jenkins, args):
         print("Job `%s` was created from the file: %s" % (args.name, args.create_from_file))
 
 
-def dump_to_file(jenkins, args):
-    config = get_config(jenkins, args.name)
+def dump_to_file(jenkins, args, key):
+    config = get_config(jenkins, args.name, key)
     if not config:
         return
 
     if not args.dry_run:
         with open(args.dump_to_file, "w") as f:
             f.write(config)
-    print("Job `%s` was dumped to the file: %s" % (args.name, args.dump_to_file))
+    print("Configuration for the {0} `{1}` was dumped to the file: {2}".
+          format(key, args.name, args.dump_to_file))
+
+    return
 
 
 def generic_action(jenkins, args, key):
@@ -234,7 +248,9 @@ def generic_action(jenkins, args, key):
                "Disable node": lambda x: jenkins.disable_node(x),
                "Disable job": lambda x: jenkins.disable_job(x),
                "Enable job": lambda x: jenkins.enable_job(x),
-               "Enable node": lambda x: jenkins.enable_node(x)}
+               "Enable node": lambda x: jenkins.enable_node(x),
+               "Dump job": lambda _: dump_to_file(jenkins, args, "job"),
+               "Dump node": lambda _: dump_to_file(jenkins, args, "node")}
 
     for item in get_items(args):
         action = actions[key]
@@ -242,22 +258,29 @@ def generic_action(jenkins, args, key):
         print("{0}: {1}".format(key, item))
 
 
-def process_jobs(jenkins, args):  # noqa: C901
-    if args.replace:
-        replace(jenkins, args)
-    elif args.dump_to_file:
-        dump_to_file(jenkins, args)
+def process_jobs(jenkins, args):
+    what_to_do = get_what_to_do(args, "job")
+    if what_to_do:
+        generic_action(jenkins, args, what_to_do)
+    elif args.replace:
+        replace(jenkins, args, "job")
     elif args.create_from_file:
         create_from_file(jenkins, args)
 
-    if args.enable:
-        generic_action(jenkins, args, "Enable job")
-    elif args.disable:
-        generic_action(jenkins, args, "Disable job")
-    elif args.delete:
-        generic_action(jenkins, args, "Delete job")
-
     return
+
+
+def get_what_to_do(args, key):
+    if args.enable:
+        return "Enable " + key
+    elif args.disable:
+        return "Disable " + key
+    elif args.delete:
+        return "Delete " + key
+    elif args.dump_to_file:
+        return "Dump " + key
+
+    return None
 
 
 if __name__ == '__main__':
@@ -270,13 +293,6 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(title='Actions', dest="action",
                                        help="Choose action type you want to perform")
     job_parser = subparsers.add_parser("job")
-    job_parser.add_argument('--replace',
-                            help="Use first symbol to configure the splitter "
-                            "and the rest of parameter to define the "
-                            "original value and desired one, i.e."
-                            "`?aaa?bbb` specifies `?` as a splitter and "
-                            "replaces all occurances of `aaa` by `bbb`")
-    job_parser.add_argument('--dump-to-file', help="dump job configuration to the file")
     job_parser.add_argument('--create-from-file', help="create the job from configuration file")
     node_parser = subparsers.add_parser("node")
 
@@ -285,9 +301,17 @@ if __name__ == '__main__':
                                 help="file to retrive the list of " +
                                 key + "s to be processed [one per line]")
         sub_parser.add_argument('--name', help=key + " to be processed [full name]")
+        sub_parser.add_argument('--dump-to-file', help="dump" + key + " configuration to the file")
         sub_parser.add_argument('--enable', action="store_true", help="enable the " + key)
         sub_parser.add_argument('--disable', action="store_true", help="disable the " + key)
         sub_parser.add_argument('--delete', action="store_true", help="delete the " + key)
+        sub_parser.add_argument('--replace',
+                                help="Replace some pattern in the configuration. "
+                                "Use first symbol to configure the splitter "
+                                "and the rest of parameter to define the "
+                                "original value and desired one, i.e."
+                                "`?aaa?bbb` specifies `?` as a splitter and "
+                                "replaces all occurances of `aaa` by `bbb`")
 
     node_parser.add_argument('--get-nodes', choices=["offline", "online", "all"],
                              help="dump list of all connected nodes")
