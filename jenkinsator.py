@@ -222,6 +222,16 @@ def replace(jenkins, args, key):
     return
 
 
+def start_jobs(jenkins, args):
+    items = get_items(args)
+
+    for item in items:
+        print("Run:", item)
+        jenkins.build_job(item, {"fake_parameter": "x"})
+
+    return
+
+
 def create_from_file(jenkins, args):
     with open(args.create_from_file) as f:
         jenkins.create_job(args.name, f.read())
@@ -266,6 +276,8 @@ def process_jobs(jenkins, args):
         replace(jenkins, args, "job")
     elif args.create_from_file:
         create_from_file(jenkins, args)
+    elif args.start:
+        start_jobs(jenkins, args)
 
     return
 
@@ -294,6 +306,7 @@ if __name__ == '__main__':
                                        help="Choose action type you want to perform")
     job_parser = subparsers.add_parser("job")
     job_parser.add_argument('--create-from-file', help="create the job from configuration file")
+    job_parser.add_argument('--start', action="store_true", help="starts the job")
     node_parser = subparsers.add_parser("node")
 
     for sub_parser, key in [(job_parser, "job"), (node_parser, "node")]:
