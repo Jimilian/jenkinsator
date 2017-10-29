@@ -39,9 +39,9 @@ class DryJenkins(object):
 def get_items_from_file(list_file):
     jobs = set()
     for line in open(list_file):
-        l = line.strip().replace("\n", "")
-        if l:
-            jobs.add(l)
+        job_name = line.strip().replace("\n", "")
+        if job_name:
+            jobs.add(job_name)
     return jobs
 
 
